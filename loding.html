@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading Page</title>
+<style>
+  * {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  body {
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: #000; /* Black background */
+    color: white;
+    overflow: hidden;
+  }
+
+  /* Loader Container */
+  #loader {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    transition: opacity 1s ease-out;
+  }
+
+  /* Neon Spinner Animation */
+  .spinner {
+    width: 70px;
+    height: 70px;
+    border: 6px solid rgba(255,255,255,0.2);
+    border-top: 6px solid #00ffcc;
+    border-radius: 50%;
+    animation: spin 1s linear infinite, glow 1.5s ease-in-out infinite alternate;
+    margin-bottom: 20px;
+    box-shadow: 0 0 20px #00ffcc;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  @keyframes glow {
+    0% { box-shadow: 0 0 10px #00ffcc; }
+    100% { box-shadow: 0 0 30px #00ffcc; }
+  }
+
+  /* Loading Text with Gradient Animation */
+  .loading-text {
+    font-size: 2rem;
+    font-weight: bold;
+    background: linear-gradient(90deg, #00ffcc, #00ffff, #00ffcc);
+    background-size: 300% 300%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: gradientMove 3s infinite linear;
+  }
+
+  @keyframes gradientMove {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="spinner"></div>
+  <div class="loading-text">Loading...</div>
+</div>
+<script>
+  // Show loader for 5 seconds, then fade out and redirect to fraud.html
+  setTimeout(() => {
+    document.getElementById('loader').style.opacity = '0';
+    setTimeout(() => {
+      window.location.href = 'fraud.html';
+    }, 1000); // Wait for fade-out to complete before redirect
+  }, 5000);
+</script>
+
+</body>
+</html>

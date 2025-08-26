@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Fraud Bank APKs Detection</title>
+<style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+        background: #000;
+        color: white;
+        font-family: 'Arial', sans-serif;
+        overflow: hidden;
+        height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        touch-action: manipulation;
+    }
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+    .overlay {
+        position: absolute;
+        top: 0; left: 0; width: 100%; height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: flex; align-items: center; justify-content: center; flex-direction: column;
+        z-index: 2;
+        padding: 20px;
+    }
+    .title {
+        font-size: clamp(2rem, 8vw, 3.5rem);
+        font-weight: bold;
+        text-align: center;
+        margin-bottom: 1.5rem;
+        text-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        animation: glow 2s ease-in-out infinite alternate;
+        line-height: 1.2;
+    }
+    .subtitle {
+        font-size: clamp(0.9rem, 3.5vw, 1.2rem);
+        opacity: 0.9;
+        text-align: center;
+        max-width: 90%;
+        line-height: 1.5;
+        margin: 0 auto;
+    }
+    .skip-btn {
+        position: absolute;
+        bottom: 20px;
+        right: 20px;
+        background: rgba(255, 0, 0, 0.3);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        padding: 10px 20px;
+        border-radius: 20px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        z-index: 3;
+        transition: all 0.3s ease;
+    }
+    .skip-btn:hover {
+        background: rgba(255, 0, 0, 0.5);
+    }
+    @keyframes glow {
+        from { text-shadow: 0 0 20px rgba(255, 0, 0, 0.8); }
+        to { text-shadow: 0 0 30px rgba(255, 0, 0, 1), 0 0 40px rgba(255, 0, 0, 0.8); }
+    }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+        .title {
+            margin-bottom: 1rem;
+        }
+        .subtitle {
+            max-width: 95%;
+            line-height: 1.4;
+        }
+        .skip-btn {
+            bottom: 15px;
+            right: 15px;
+            padding: 8px 16px;
+            font-size: 0.8rem;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .overlay {
+            padding: 15px;
+        }
+        .title {
+            font-size: 1.8rem;
+            margin-bottom: 0.8rem;
+        }
+        .subtitle {
+            font-size: 0.85rem;
+            line-height: 1.3;
+        }
+    }
+</style>
+</head>
+<body>
+    <video id="mainVideo" autoplay muted playsinline>
+        <source src="video.mp4" type="video/mp4">
+    </video>
+
+    <div class="overlay" id="overlay">
+        <h1 class="title">Fraud Bank APKs Detection</h1>
+        <p class="subtitle">Advanced machine learning technology to detect and prevent fraudulent banking applications</p>
+    </div>
+    
+    <button class="skip-btn" id="skipBtn">Skip Intro</button>
+
+<script>
+    const video = document.getElementById('mainVideo');
+    const overlay = document.getElementById('overlay');
+
+    const introDuration = 10; // max 10 seconds for first video
+
+    // After 10 seconds OR when first video ends, switch to loading.html
+    let timer = setTimeout(() => {
+        goToLoadingPage();
+    }, introDuration * 1000);
+
+    video.addEventListener('ended', () => {
+        clearTimeout(timer);
+        goToLoadingPage();
+    });
+
+    function goToLoadingPage() {
+        overlay.style.opacity = '0';
+        overlay.style.transition = 'opacity 1s ease';
+        setTimeout(() => {
+            window.location.href = 'loding.html';
+        }, 1000);
+    }
+
+    // Skip button functionality
+    const skipBtn = document.getElementById('skipBtn');
+    skipBtn.addEventListener('click', () => {
+        clearTimeout(timer);
+        window.location.href = 'fraud.html';
+    });
+
+    // Touch events for mobile
+    skipBtn.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        skipBtn.style.transform = 'scale(0.95)';
+    });
+
+    skipBtn.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        skipBtn.style.transform = 'scale(1)';
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>APK ML Analyzer (Demo)</title>
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js"></script>
+<script src="firebase-common.js"></script>
+<style>
+  :root{
+    --bg:#0f172a; --panel:#111827; --muted:#94a3b8; --brand:#38bdf8;
+    --safe:#22c55e; --risk:#ef4444; --warn:#facc15; --text:#e5e7eb;
+    --card:#1f2937; --chip:#334155; --bar:#334155;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(90vw 90vh at 70% 20%, #0b1225, #0a1022 60%, #060a18 100%),
+                linear-gradient(135deg, #0f172a, #1e293b);
+    color:var(--text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+    position: relative;
+    overflow-x: hidden;
+    touch-action: manipulation;
+  }
+  
+  /* Matrix grid animation */
+  .matrix-grid {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: -1;
+    opacity: 0.4;
+  }
+  
+  .grid-line {
+    position: absolute;
+    background: rgba(0, 195, 255, 0.5);
+    animation: gridPulse 3s infinite ease-in-out;
+  }
+  
+  .grid-line.horizontal {
+    width: 100%;
+    height: 1px;
+    left: 0;
+  }
+  
+  .grid-line.vertical {
+    height: 100%;
+    width: 1px;
+    top: 0;
+  }
+  
+  .matrix-digit {
+    position: absolute;
+    color: rgba(0, 255, 255, 0.8);
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    font-weight: bold;
+    text-shadow: 0 0 8px rgba(0, 255, 255, 0.8);
+    animation: digitFall 8s infinite linear;
+    opacity: 0;
+  }
+  
+  @keyframes gridPulse {
+    0%, 100% { opacity: 0.2; }
+    50% { opacity: 0.6; }
+  }
+  
+  @keyframes digitFall {
+    0% {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    5% {
+      opacity: 1;
+    }
+    95% {
+      opacity: 0.9;
+    }
+    100% {
+      transform: translateY(100vh);
+      opacity: 0;
+    }
+  }
+  .wrap{
+    width:min(100%, 880px); padding:20px;
+  }
+  .card{
+    background:var(--panel); border:1px solid #1f2937; border-radius:16px; padding:20px;
+    box-shadow: 0 8px 25px rgba(0,0,0,.35);
+  }
+  h1{font-size:22px; margin:0 0 6px; color:var(--brand); text-align:center;}
+  p.lead{margin:0 0 16px; color:var(--muted); font-size:14px; text-align:center;}
+  .uploader{
+    display:flex; flex-wrap:wrap; gap:12px; align-items:center; margin:14px 0 18px;
+    background:var(--card); border:1px dashed #334155; border-radius:12px; padding:16px;
+  }
+  
+  input[type="file"]{display:none}
+  .btn{
+    background:var(--brand); color:#00131a; font-weight:600; border:0; border-radius:12px;
+    padding:12px 16px; cursor:pointer; transition:.2s transform, .2s opacity; font-size:14px;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    min-height: 44px;
+  }
+  .btn:hover{transform:translateY(-1px)}
+  .btn.secondary{background:#0ea5e9; color:#001018}
+  .filetag{
+    background:var(--chip); color:#cbd5e1; border-radius:10px; padding:10px 12px; font-size:14px;
+    flex:1;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+  }
+  .grid{display:grid; gap:16px}
+  .panel{
+    background:var(--card); border:1px solid #2a3647; border-radius:14px; padding:16px;
+  }
+  .panel h3{margin:0 0 12px; font-size:18px; color:#cfe8ff; text-align:center;}
+  .kv{display:grid; grid-template-columns:1fr; gap:12px; font-size:14px}
+  .badge{
+    display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px;
+    font-weight:700; font-size:14px; letter-spacing:.3px;
+    justify-content: center;
+  }
+  .safe{background:rgba(34,197,94,.15); color:var(--safe); border:1px solid rgba(34,197,94,.35)}
+  .risk{background:rgba(239,68,68,.15); color:var(--risk); border:1px solid rgba(239,68,68,.35)}
+  .warn{background:rgba(250,204,21,.15); color:var(--warn); border:1px solid rgba(250,204,21,.35)}
+  .bars{display:grid; gap:12px}
+  .bar{background:var(--bar); height:12px; border-radius:99px; overflow:hidden}
+  .bar > i{display:block; height:100%; width:0}
+  .lab{display:flex; justify-content:space-between; font-size:14px; color:#cbd5e1; margin-bottom:8px}
+  .chiplist{display:flex; flex-wrap:wrap; gap:8px; justify-content:center;}
+  .chip{background:var(--chip); color:#cbd5e1; border-radius:999px; padding:8px 12px; font-size:12px}
+  .muted{color:var(--muted)}
+  .footer{margin-top:12px; font-size:12px; color:var(--muted); text-align:center;}
+
+  /* Mobile-specific styles */
+  @media (max-width: 768px) {
+    body {
+      padding: 10px;
+      align-items: flex-start;
+    }
+    
+    .wrap {
+      padding: 15px;
+      width: 100%;
+    }
+    
+    .card {
+      padding: 18px;
+      border-radius: 14px;
+    }
+    
+    h1 {
+      font-size: 20px;
+    }
+    
+    p.lead {
+      font-size: 13px;
+    }
+    
+    .uploader {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 10px;
+      padding: 14px;
+    }
+    
+    .btn {
+      width: 100%;
+      padding: 14px;
+      font-size: 16px;
+      min-height: 48px;
+    }
+    
+    .filetag {
+      min-height: 44px;
+      text-align: center;
+      justify-content: center;
+    }
+    
+    .grid {
+      gap: 12px;
+    }
+    
+    .panel {
+      padding: 14px;
+    }
+    
+    .panel h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+    
+    .kv {
+      gap: 10px;
+    }
+    
+    .badge {
+      font-size: 13px;
+      padding: 7px 10px;
+    }
+    
+    .bars {
+      gap: 10px;
+    }
+    
+    .lab {
+      font-size: 13px;
+    }
+    
+    .chip {
+      font-size: 11px;
+      padding: 6px 10px;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .wrap {
+      padding: 10px;
+    }
+    
+    .card {
+      padding: 16px;
+    }
+    
+    h1 {
+      font-size: 18px;
+    }
+    
+    p.lead {
+      font-size: 12px;
+      margin-bottom: 12px;
+    }
+    
+    .uploader {
+      padding: 12px;
+      gap: 8px;
+    }
+    
+    .btn {
+      padding: 12px;
+      font-size: 15px;
+    }
+    
+    .filetag {
+      font-size: 13px;
+      padding: 8px 10px;
+    }
+    
+    .panel {
+      padding: 12px;
+    }
+    
+    .panel h3 {
+      font-size: 15px;
+    }
+    
+    .badge {
+      font-size: 12px;
+    }
+    
+    .lab {
+      font-size: 12px;
+    }
+  }
+
+  /* Tablet and desktop specific */
+  @media (min-width: 769px) {
+    .grid {
+      grid-template-columns: 1.1fr .9fr;
+    }
+    
+    .kv {
+      grid-template-columns: 140px 1fr;
+    }
+  }
+
+  /* Very small mobile devices */
+  @media (max-width: 360px) {
+    .wrap {
+      padding: 8px;
+    }
+    
+    .card {
+      padding: 14px;
+    }
+    
+    h1 {
+      font-size: 16px;
+    }
+    
+    .btn {
+      font-size: 14px;
+      padding: 10px;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>APK ML Analyzer</h1>
+      <p class="lead">Uploads an APK file name, extracts simple features, and runs a tiny softmax model to estimate if it’s an <b>Official Banking</b> app, a <b>Fraud/Clone</b>, a <b>Hacking/Mod</b>, or <b>Other</b>. (Demo only — no real APK parsing.)</p>
+
+      <div class="uploader">
+        <input type="file" id="apkFile" accept=".apk" />
+        <button class="btn" id="chooseBtn">Choose APK</button>
+        <span id="fileTag" class="filetag">No file selected</span>
+        <button class="btn secondary" id="analyzeBtn" disabled>Analyze</button>
+      </div>
+
+      <div class="grid">
+        <div class="panel" id="summaryPanel">
+          <h3>Result</h3>
+          <div class="kv">
+            <div class="muted">File</div><div id="kvFile" class="muted">—</div>
+            <div class="muted">Detected Category</div><div id="kvCat">—</div>
+            <div class="muted">Safety</div><div id="kvSafe">—</div>
+            <div class="muted">Confidence</div><div id="kvConf">—</div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Model Probabilities</h3>
+          <div class="bars">
+            <div>
+              <div class="lab"><span>Official Banking</span><b id="pOfficial">0%</b></div>
+              <div class="bar"><i id="bOfficial"></i></div>
+            </div>
+            <div>
+              <div class="lab"><span>Fraud / Clone</span><b id="pFraud">0%</b></div>
+              <div class="bar"><i id="bFraud"></i></div>
+            </div>
+            <div>
+              <div class="lab"><span>Hacking / Modified</span><b id="pHack">0%</b></div>
+              <div class="bar"><i id="bHack"></i></div>
+            </div>
+            <div>
+              <div class="lab"><span>Other</span><b id="pOther">0%</b></div>
+              <div class="bar"><i id="bOther"></i></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Fraud Alert Section - Only shows for fraudulent APKs -->
+      <div id="fraudAlert" style="display: none; margin-top: 20px;">
+        <div class="panel" style="border-color: var(--risk); background: rgba(239,68,68,0.1);">
+          <h3 style="color: var(--risk);">⚠️ Security Warning</h3>
+          <p style="margin: 0 0 12px 0; color: var(--text);">This APK has been identified as potentially fraudulent. Proceed with extreme caution.</p>
+          <a href="homepage.html"><button id="reportBtn" class="btn" style="background: var(--risk);">
+            🚨 Report Fraudulent App
+          </button></a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+<script>
+/* ---------------------------
+   Tiny in-browser “ML” model
+   ---------------------------
+   We build a feature vector from filename tokens,
+   score 4 classes with linear weights, then softmax.
+   Classes: 0=Official, 1=Fraud/Clone, 2=Hack/Mod, 3=Other
+-------------------------------- */
+
+const BANK_KEYWORDS = [
+  "bank","banking","upi","netbank","wallet","kyc"
+];
+const OFFICIAL_BANKS = [
+  "sbi","statebank","hdfc","icici","axis","kotak","bob","bankofbaroda",
+  "yesbank","idfc","indusind","canarabank","pnb","bankofindia","unionbank"
+];
+const SUSPICIOUS = [
+  "mod","hack","crack","patched","clone","premium","vip","pro","plus","unlocked","cheat"
+];
+const FRAUDY = [
+  "fraud","scam","phish","spoof","fake","malware","trojan"
+];
+const SOCIAL = [
+  "whatsapp","facebook","instagram","telegram","snapchat","x","twitter","social"
+];
+
+function tokenize(name){
+  return name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean);
+}
+
+function buildFeatures(tokens, sizeKB){
+  // Binary indicators
+  const f = {
+    hasBankKw: tokens.some(t=>BANK_KEYWORDS.includes(t)),
+    hasOfficialBank: tokens.some(t=>OFFICIAL_BANKS.includes(t)),
+    hasSuspicious: tokens.some(t=>SUSPICIOUS.includes(t)),
+    hasFraudy: tokens.some(t=>FRAUDY.includes(t)),
+    hasSocial: tokens.some(t=>SOCIAL.includes(t)),
+    looksVersioned: tokens.some(t=>/^v?\d+(\.\d+)*$/.test(t) || /\d{1,2}\.\d{1,2}/.test(t)),
+    sizeLarge: sizeKB>40000,   // > 40 MB
+    sizeTiny: sizeKB<5000      // < 5 MB (often suspicious for full apps)
+  };
+  return f;
+}
+
+// Weight matrix (rows=classes), feature order fixed:
+const FEATS = ["hasBankKw","hasOfficialBank","hasSuspicious","hasFraudy","hasSocial","looksVersioned","sizeLarge","sizeTiny"];
+const W = {
+  //            bankKw offBank suspicious fraudy social version sizeL sizeS  + bias
+  Official :   [  1.6,   2.4,    -2.2,     -2.0,   -0.6,  0.3,   0.4,  -0.8,  0.2 ],
+  Fraud    :   [  1.0,  -2.0,     0.6,      2.4,   0.2,  0.2,  -0.2,   0.8,  0.1 ],
+  HackMod  :   [  0.4,  -2.2,     2.8,      0.6,   0.4,  0.3,  -0.2,   0.9,  0.0 ],
+  Other    :   [ -0.6,  -0.6,    -0.3,     -0.3,   0.8,  0.1,   0.1,  -0.1,  0.0 ],
+};
+
+function dot(weights, featsArr){
+  let s = weights[weights.length-1]; // bias
+  for(let i=0;i<featsArr.length;i++) s += weights[i]*featsArr[i];
+  return s;
+}
+function softmax(scores){
+  const m = Math.max(...scores);
+  const exps = scores.map(v=>Math.exp(v-m));
+  const sum = exps.reduce((a,b)=>a+b,0);
+  return exps.map(v=>v/sum);
+}
+
+function vectorize(f){
+  return FEATS.map(k => f[k] ? 1 : 0);
+}
+
+function classify(features){
+  const x = vectorize(features);
+  const scores = [
+    dot(W.Official, x),
+    dot(W.Fraud, x),
+    dot(W.HackMod, x),
+    dot(W.Other, x)
+  ];
+  const probs = softmax(scores);
+  const classes = ["Official Banking","Fraud / Clone","Hacking / Modified","Other"];
+  const topIdx = probs.indexOf(Math.max(...probs));
+  return { probs, topIdx, classes };
+}
+
+/* ---------------------------
+   UI logic
+-------------------------------- */
+const fileInput = document.getElementById('apkFile');
+const chooseBtn = document.getElementById('chooseBtn');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const fileTag = document.getElementById('fileTag');
+
+const kvFile = document.getElementById('kvFile');
+const kvCat = document.getElementById('kvCat');
+const kvSafe = document.getElementById('kvSafe');
+const kvConf = document.getElementById('kvConf');
+
+const pOfficial = document.getElementById('pOfficial');
+const pFraud    = document.getElementById('pFraud');
+const pHack     = document.getElementById('pHack');
+const pOther    = document.getElementById('pOther');
+
+const bOfficial = document.getElementById('bOfficial');
+const bFraud    = document.getElementById('bFraud');
+const bHack     = document.getElementById('bHack');
+const bOther    = document.getElementById('bOther');
+
+const reasonChips = document.getElementById('reasonChips');
+const fraudAlert = document.getElementById('fraudAlert');
+const reportBtn = document.getElementById('reportBtn');
+
+chooseBtn.addEventListener('click', ()=> fileInput.click());
+fileInput.addEventListener('change', ()=>{
+  if(fileInput.files[0]){
+    fileTag.textContent = fileInput.files[0].name;
+    analyzeBtn.disabled = false;
+  }else{
+    fileTag.textContent = 'No file selected';
+    analyzeBtn.disabled = true;
+  }
+});
+
+analyzeBtn.addEventListener('click', async ()=>{
+  const f = fileInput.files[0];
+  if(!f){ return; }
+
+  // We can only read the size & name in front-end
+  const sizeKB = Math.round(f.size/1024);
+  const tokens = tokenize(f.name);
+
+  const feats = buildFeatures(tokens, sizeKB);
+  const { probs, topIdx, classes } = classify(feats);
+  const topProb = probs[topIdx];
+
+  // Save analysis result to Firebase
+  const analysisData = {
+    fileName: f.name,
+    fileSizeKB: sizeKB,
+    detectedCategory: classes[topIdx],
+    confidence: Math.round(topProb * 100),
+    probabilities: {
+      official: Math.round(probs[0] * 100),
+      fraud: Math.round(probs[1] * 100),
+      hackMod: Math.round(probs[2] * 100),
+      other: Math.round(probs[3] * 100)
+    },
+    features: feats,
+    tokens: tokens
+  };
+
+  const resultId = await saveAnalysisResult(analysisData);
+  if (resultId) {
+    console.log('Analysis saved to Firebase with ID:', resultId);
+  }
+
+  // Category to safety mapping (demo)
+  let safetyHTML='', catHTML='';
+  const pct = (p)=>Math.round(p*100);
+
+  if(classes[topIdx]==="Official Banking"){
+    // extra guard: if suspicious or fraud flags present, downgrade
+    if(feats.hasSuspicious || feats.hasFraudy || feats.sizeTiny){
+    safetyHTML = '<span class="badge warn">Potentially Unofficial — Verify Signature</span>';
+    } else {
+    safetyHTML = '<span class="badge safe">Likely Safe (Official-like)</span>';
+    }
+    catHTML = 'Official Banking';
+  }else if(classes[topIdx]==="Fraud / Clone"){
+    safetyHTML = '<span class="badge risk">Danger — Likely Fraud/Clone</span>';
+    catHTML = 'Fraud / Clone';
+  }else if(classes[topIdx]==="Hacking / Modified"){
+    safetyHTML = '<span class="badge risk">Risk — Modified/Patched</span>';
+    catHTML = 'Hacking / Modified';
+  }else{
+    // Other
+    safetyHTML = '<span class="badge warn">Unknown — Needs Verification</span>';
+    catHTML = 'Other';
+  }
+
+  // Update summary
+    kvFile.textContent = `${f.name} (${sizeKB} KB)`;
+  kvCat.textContent = catHTML;
+  kvSafe.innerHTML = safetyHTML;
+  kvConf.textContent = `${pct(topProb)}%`;
+
+  // Update bars
+    const setBar = (elBar, elPct, val) => {
+    const p = pct(val);
+    elPct.textContent = p + '%';
+    elBar.style.width = p + '%';
+    elBar.style.background = p>70 ? 'linear-gradient(90deg,#22c55e,#16a34a)' :
+                          p>40 ? 'linear-gradient(90deg,#facc15,#eab308)' :
+                                 'linear-gradient(90deg,#94a3b8,#64748b)';
+  };
+  setBar(bOfficial, pOfficial, probs[0]);
+  setBar(bFraud,    pFraud,    probs[1]);
+  setBar(bHack,     pHack,     probs[2]);
+  setBar(bOther,    pOther,    probs[3]);
+
+  // Show/hide fraud alert based on detection
+  if (classes[topIdx] === "Fraud / Clone" || classes[topIdx] === "Hacking / Modified") {
+    fraudAlert.style.display = 'block';
+  } else {
+    fraudAlert.style.display = 'none';
+  }
+
+  // Add open button for safe APKs
+  const openBtnContainer = document.getElementById('openBtnContainer');
+  if (openBtnContainer) {
+    openBtnContainer.remove();
+  }
+  
+  if (classes[topIdx] === "Official Banking" && !feats.hasSuspicious && !feats.hasFraudy && !feats.sizeTiny) {
+    const openBtn = document.createElement('button');
+    openBtn.className = 'btn';
+    openBtn.style.background = 'var(--safe)';
+    openBtn.style.marginTop = '12px';
+    openBtn.textContent = '📱 Open APK (Safe)';
+    
+    const container = document.createElement('div');
+    container.id = 'openBtnContainer';
+    container.style.marginTop = '20px';
+    container.appendChild(openBtn);
+    summaryPanel.appendChild(container);
+
+    openBtn.addEventListener('click', () => {
+      // Simulate APK installation process
+      const installSimulation = document.createElement('div');
+      installSimulation.style.position = 'fixed';
+      installSimulation.style.top = '50%';
+      installSimulation.style.left = '50%';
+      installSimulation.style.transform = 'translate(-50%, -50%)';
+      installSimulation.style.background = 'var(--panel)';
+      installSimulation.style.border = '2px solid var(--safe)';
+      installSimulation.style.borderRadius = '12px';
+      installSimulation.style.padding = '20px';
+      installSimulation.style.zIndex = '1000';
+      installSimulation.style.boxShadow = '0 10px 30px rgba(0,0,0,0.5)';
+      
+      installSimulation.innerHTML = `
+        <h3 style="color: var(--safe); margin: 0 0 15px 0;">✅ APK Installation</h3>
+        <p style="margin: 0 0 15px 0; color: var(--text);">
+          Installing: <strong>${f.name}</strong><br>
+          This appears to be a legitimate banking application.
+        </p>
+        <div style="background: var(--bar); height: 8px; border-radius: 4px; overflow: hidden; margin: 15px 0;">
+          <div id="progressBar" style="background: var(--safe); height: 100%; width: 0%; transition: width 2s ease-in-out;"></div>
+        </div>
+        <button id="closeInstall" class="btn" style="background: var(--safe); width: 100%;">Complete Installation</button>
+      `;
+      
+      document.body.appendChild(installSimulation);
+      
+      // Simulate installation progress
+      setTimeout(() => {
+        document.getElementById('progressBar').style.width = '50%';
+      }, 500);
+      
+      setTimeout(() => {
+        document.getElementById('progressBar').style.width = '100%';
+      }, 1500);
+      
+      document.getElementById('closeInstall').addEventListener('click', () => {
+        document.body.removeChild(installSimulation);
+        alert('🎉 Installation Complete!\n\nThe banking application has been successfully installed on your device.');
+      });
+    });
+  }
+
+  // Show reasoning chips
+  reasonChips.innerHTML = '';
+  const addChip = (txt)=> {
+    const span = document.createElement('span'); span.className='chip'; span.textContent=txt;
+    reasonChips.appendChild(span);
+  }
+  const pushIf = (cond, txt)=> cond && addChip(txt);
+
+  pushIf(feats.hasBankKw,     'feature: bank keyword');
+  pushIf(feats.hasOfficialBank,'feature: official bank name');
+  pushIf(feats.hasSuspicious, 'feature: suspicious term (mod/hack/…)');
+  pushIf(feats.hasFraudy,     'feature: fraud/scam term');
+  pushIf(feats.hasSocial,     'feature: social app token');
+  pushIf(feats.looksVersioned,'feature: version token');
+  pushIf(feats.sizeLarge,     'feature: large size');
+  pushIf(feats.sizeTiny,      'feature: tiny size');
+
+  if(!reasonChips.children.length){
+    addChip('no notable features');
+  }
+
+ // Report button functionality
+reportBtn.addEventListener('click', async () => {
+  const reportData = {
+    fileName: f.name,
+    fileSizeKB: sizeKB,
+    detectedCategory: classes[topIdx],
+    confidence: Math.round(topProb * 100),
+    analysisId: resultId,
+    features: feats,
+    tokens: tokens
+  };
+
+  const reportId = await reportFraudulentAPK(reportData);
+  if (reportId) {
+    // Optionally save to localStorage or sessionStorage if you want to pass data
+    localStorage.setItem('lastReportId', reportId);
+    localStorage.setItem('lastReportedFile', f.name);
+    localStorage.setItem('lastDetectedCategory', classes[topIdx]);
+    localStorage.setItem('lastConfidence', Math.round(topProb * 100));
+
+    // Redirect to report.html
+    window.location.href = 'homepage.html';
+  } else {
+    alert('❌ Failed to report the fraudulent APK. Please try again.');
+  }
+});
+
+});
+</script>
+
+<script>
+// Matrix grid animation
+function createMatrixGrid() {
+  const matrixGrid = document.createElement('div');
+  matrixGrid.className = 'matrix-grid';
+  document.body.appendChild(matrixGrid);
+  
+  // Create horizontal grid lines
+  for (let i = 0; i < 20; i++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line horizontal';
+    line.style.top = `${(i * 5)}%`;
+    line.style.animationDelay = `${Math.random() * 2}s`;
+    matrixGrid.appendChild(line);
+  }
+  
+  // Create vertical grid lines
+  for (let i = 0; i < 20; i++) {
+    const line = document.createElement('div');
+    line.className = 'grid-line vertical';
+    line.style.left = `${(i * 5)}%`;
+    line.style.animationDelay = `${Math.random() * 2}s`;
+    matrixGrid.appendChild(line);
+  }
+  
+  // Create falling digits
+  function createFallingDigit() {
+    const digit = document.createElement('div');
+    digit.className = 'matrix-digit';
+    digit.textContent = Math.random() > 0.5 ? '1' : '0';
+    digit.style.left = `${Math.random() * 100}%`;
+    digit.style.animationDelay = `${Math.random() * 5}s`;
+    matrixGrid.appendChild(digit);
+    
+    // Remove digit after animation completes
+    setTimeout(() => {
+      if (digit.parentNode) {
+        digit.parentNode.removeChild(digit);
+      }
+    }, 10000);
+  }
+  
+  // Create multiple falling digits
+  for (let i = 0; i < 30; i++) {
+    setTimeout(createFallingDigit, i * 300);
+  }
+  
+  // Continue creating falling digits
+  setInterval(createFallingDigit, 500);
+}
+
+// Initialize matrix grid animation
+createMatrixGrid();
+</script>
+</body>
+</html>

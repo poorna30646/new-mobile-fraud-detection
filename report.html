@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Report Fraudulent APK</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: Arial, sans-serif;
+      background: #f4f6f8;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      padding: 20px;
+      margin: 0;
+    }
+    .container {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+      color: #333;
+      font-size: 24px;
+    }
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px;
+      font-size: 16px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      margin-bottom: 15px;
+      resize: none;
+      font-family: inherit;
+    }
+    textarea:focus {
+      outline: none;
+      border-color: #007BFF;
+      box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+    }
+    button {
+      background: #007BFF;
+      color: white;
+      border: none;
+      padding: 14px 24px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      width: 100%;
+      transition: background-color 0.3s ease;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+    }
+    button:hover, button:active {
+      background: #0056b3;
+    }
+    .success {
+      color: #28a745;
+      font-size: 14px;
+      margin-top: 15px;
+      font-weight: 500;
+    }
+    .error {
+      color: #dc3545;
+      font-size: 14px;
+      margin-top: 15px;
+      font-weight: 500;
+    }
+
+    /* Mobile-specific styles */
+    @media (max-width: 768px) {
+      body {
+        padding: 15px;
+        align-items: flex-start;
+        padding-top: 40px;
+      }
+      
+      .container {
+        padding: 20px;
+        margin: 0;
+      }
+      
+      h2 {
+        font-size: 22px;
+        margin-bottom: 15px;
+      }
+      
+      textarea {
+        height: 100px;
+        padding: 14px;
+        font-size: 16px;
+      }
+      
+      button {
+        padding: 16px;
+        font-size: 16px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      body {
+        padding: 10px;
+        padding-top: 30px;
+      }
+      
+      .container {
+        padding: 18px;
+      }
+      
+      h2 {
+        font-size: 20px;
+        margin-bottom: 12px;
+      }
+      
+      textarea {
+        height: 90px;
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      
+      button {
+        padding: 14px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <h2>Report a Fraudulent APK</h2>
+  <textarea id="reportMessage" placeholder="Describe the issue..."></textarea>
+  <button id="submitReport">Submit Report</button>
+  <div id="status"></div>
+</div>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<script>
+  // ✅ Firebase Config (use your own values)
+  const firebaseConfig = {
+  apiKey: "AIzaSyAhPNlJxxQ1L0sVaQH1mYudKHV8SonFA2k",
+  authDomain: "fraud-bank-apks.firebaseapp.com",
+  projectId: "fraud-bank-apks",
+  storageBucket: "fraud-bank-apks.firebasestorage.app",
+  messagingSenderId: "255515194045",
+  appId: "1:255515194045:web:308affe512983bee00bdd4",
+  measurementId: "G-HE60ESN20Q"
+};
+
+  // ✅ Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+
+  // ✅ Handle Report Submission
+  document.getElementById('submitReport').addEventListener('click', async () => {
+    const message = document.getElementById('reportMessage').value.trim();
+    const statusDiv = document.getElementById('status');
+
+    if (message === "") {
+      statusDiv.textContent = "Please enter a message before submitting.";
+      statusDiv.className = "error";
+      return;
+    }
+
+    try {
+      await db.collection("fraud_reports").add({
+        message: message,
+        reportedAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+      statusDiv.textContent = "✅ Report submitted successfully!";
+      statusDiv.className = "success";
+      document.getElementById('reportMessage').value = "";
+    } catch (error) {
+      console.error("Error saving report:", error);
+      statusDiv.textContent = "❌ Failed to submit report. Try again.";
+      statusDiv.className = "error";
+    }
+  });
+</script>
+
+</body>
+</html>
