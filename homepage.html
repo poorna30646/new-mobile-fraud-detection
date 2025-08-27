@@ -5,7 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Report To Cyber Crime</title>
   <link rel="stylesheet" href="style.css">
+
+  <!-- EmailJS SDK -->
   <script src="https://cdn.jsdelivr.net/npm/emailjs-com@3/dist/email.min.js"></script>
+
+  <!-- Firebase SDKs (needed for Firestore) -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-firestore-compat.js"></script>
+
   <style>
     /* Mobile-specific overrides */
     @media (max-width: 768px) {
@@ -54,6 +61,7 @@
     button {
       -webkit-tap-highlight-color: transparent;
       touch-action: manipulation;
+      cursor: pointer;
     }
     
     input:focus, textarea:focus {
@@ -65,7 +73,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>📧Report To Cyber Crime</h2>
+    <h2>📧 Report To Cyber Crime</h2>
     <input type="text" id="name" placeholder="Your Name">
     <input type="email" id="fromEmail" placeholder="Your Email (Sender)">
     <textarea id="message" placeholder="Enter your message"></textarea>
@@ -73,6 +81,8 @@
     <p id="status"></p>
   </div>
 
+  <!-- Your script.js (must come after SDKs) -->
   <script src="script.js"></script>
 </body>
 </html>
+
